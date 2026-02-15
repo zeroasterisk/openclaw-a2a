@@ -1,0 +1,39 @@
+{
+  "name": "openclaw-a2a",
+  "version": "0.1.0",
+  "description": "A2A protocol adapter for OpenClaw Gateway",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npx vitest run --exclude '**/dist/**'",
+    "test:watch": "npx vitest --exclude '**/dist/**'",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "a2a",
+    "openclaw",
+    "agent",
+    "ai"
+  ],
+  "author": "zeroasterisk",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "eventsource": "^2.0.2",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/eventsource": "^1.1.15",
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.1"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
