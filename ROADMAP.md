@@ -42,6 +42,14 @@
 
 ### Medium Priority
 
+#### Relay Resilience Testing
+- **Agent offline scenarios**: Verify message timeout when backend agent disconnects
+- **Queue behavior**: Messages enqueued while agent offline, delivered on reconnect
+- **Timeout configuration**: Configurable request timeout (default 30s?)
+- **Load testing**: Concurrent message throughput, connection limits
+- **Reconnection storms**: Graceful handling when many agents reconnect simultaneously
+- **Memory pressure**: Behavior under high pending-request counts
+
 #### Client Mode
 - Tools for calling remote A2A agents
 - Agent discovery
