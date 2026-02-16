@@ -1,273 +1,36 @@
 # OpenClaw A2A
 
-**Add A2A (Agent2Agent) protocol support to OpenClaw.** Let other AI agents discover and talk to your OpenClaw agent — or call remote A2A agents from your workflows.
+> ⚠️ **Beta** — Tested and working. Shipping today!
 
-🎯 **TCK Status:** 100% compliant (120/120 tests passing)
+**A2A channel plugin for [OpenClaw](https://openclaw.ai).** Let other AI agents discover and talk to your OpenClaw — or talk to other A2A agents.
 
----
+## Quick Start
 
-## TL;DR
-
-This plugin makes your OpenClaw agent accessible via the [A2A protocol](https://a2a-protocol.org/). Think of it as adding a universal API that any A2A-compatible agent can use to:
-
-- Send messages to your agent
-- Track task progress  
-- Get structured responses
-
-Works behind NAT (via relay) or with public URLs (direct mode).
+### 1. Add the Plugin
 
 ```bash
-npm install openclaw-a2a
+# Clone into your extensions
+git clone https://github.com/zeroasterisk/openclaw-a2a ~/.openclaw/extensions/a2a
 ```
 
-```jsonc
-// openclaw.json
-{
-  "a2a": {
-    "enabled": true,
-    "server": {
-      "mode": "relay",
-      "relay": {
-        "url": "wss://your-relay.example.com/agent",
-        "agentId": "my-agent"
-      }
-    }
-  }
-}
-```
+Or copy from [zeroasterisk/zaf/plugins/a2a](https://github.com/zeroasterisk/zaf/tree/main/plugins/a2a).
 
----
-
-## Getting Started
-
-### 1. Install
-
-```bash
-cd your-openclaw-project
-npm install openclaw-a2a
-```
-
-### 2. Choose Your Mode
-
-**Relay Mode** (recommended for home/laptop):
-- No public URL needed
-- Works behind NAT/firewall
-- Connects outbound to a relay server
-
-**Direct Mode** (for cloud deployments):
-- Exposes HTTP endpoints directly
-- Requires public URL + TLS
-- Lower latency
-
-### 3. Configure
-
-**Relay Mode:**
-```jsonc
-{
-  "a2a": {
-    "enabled": true,
-    "server": {
-      "mode": "relay",
-      "relay": {
-        "url": "wss://a2a-relay.example.com/agent",
-        "tenant": "personal",
-        "agentId": "zaf",
-        "token": "${A2A_RELAY_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-**Direct Mode:**
-```jsonc
-{
-  "a2a": {
-    "enabled": true,
-    "server": {
-      "mode": "direct",
-      "direct": {
-        "path": "/a2a",
-        "publicUrl": "https://my-agent.example.com"
-      }
-    }
-  }
-}
-```
-
-### 4. Test It
-
-Your agent will automatically generate an Agent Card:
-
-```bash
-# Direct mode
-curl https://my-agent.example.com/.well-known/agent.json
-
-# Or test locally
-curl http://localhost:9999/.well-known/agent.json
-```
-
-Send a message:
-```bash
-curl -X POST http://localhost:9999 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "message/send",
-    "params": {
-      "message": {
-        "messageId": "test-1",
-        "role": "user",
-        "parts": [{"type": "text", "text": "Hello!"}]
-      }
-    }
-  }'
-```
-
----
-
-## Detailed Documentation
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      OpenClaw Gateway                            │
-│                                                                  │
-│  Telegram │ Discord │ Signal │ A2A  ← channels                  │
-│                      ↓                                           │
-│              Session Router → Agent Sessions                     │
-│                                                                  │
-│  A2A specific:                                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ A2A Server (direct) │ A2A Relay Client (relay mode)      │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-A2A is treated as another **channel** — just like Telegram or Discord. Messages come in via A2A, get routed to agent sessions, and responses go back via A2A.
-
-### A2A Methods Supported
-
-| Method | Description | Status |
-|--------|-------------|--------|
-| `message/send` | Send a message, get task back | ✅ |
-| `tasks/get` | Get task by ID | ✅ |
-| `tasks/list` | List tasks with filters | ✅ |
-| `tasks/cancel` | Cancel a running task | ✅ |
-| `message/stream` | Stream responses (SSE) | 🚧 Planned |
-
-### Session Mapping
-
-A2A `contextId` → OpenClaw session:
-```
-agent:main:a2a:{contextId}
-```
-
-Multiple tasks can share a context (conversation continuity). Tasks within the same context are processed sequentially.
-
-### Agent Card Generation
-
-The plugin auto-generates an Agent Card from your OpenClaw config:
+### 2. Configure
 
 ```json
 {
-  "name": "My Agent",
-  "description": "From openclaw config",
-  "url": "https://...",
-  "capabilities": {
-    "streaming": false,
-    "pushNotifications": false,
-    "stateTransitionHistory": true
+  "plugins": {
+    "load": { "paths": ["~/.openclaw/extensions/a2a"] },
+    "entries": { "a2a": { "enabled": true } }
   },
-  "skills": [
-    // Auto-populated from OpenClaw skills
-  ]
-}
-```
-
-Override any field via `a2a.agentCard` in config.
-
-### Task Lifecycle
-
-```
-submitted → working → completed
-                   ↘ failed
-                   ↘ canceled
-```
-
-- **submitted**: Task received, may be queued
-- **working**: Agent is processing
-- **completed**: Response ready
-- **failed**: Error occurred
-- **canceled**: User/client canceled
-
-### Persistence
-
-Tasks persist in SQLite (`~/.openclaw/data/a2a-tasks.db`). Survives gateway restarts.
-
-- Active tasks: kept indefinitely
-- Completed/failed: 7 days (configurable)
-
-### Configuration Reference
-
-```typescript
-interface A2AConfig {
-  enabled?: boolean;              // Enable A2A plugin
-  
-  server?: {
-    enabled?: boolean;            // Enable server mode
-    mode?: 'direct' | 'relay';    // Connection mode
-    
-    direct?: {
-      path?: string;              // Default: /a2a
-      publicUrl?: string;         // Required for discovery
-    };
-    
-    relay?: {
-      url: string;                // Relay WebSocket URL
-      tenant?: string;            // Multi-tenant namespace
-      agentId: string;            // Your agent ID
-      token?: string;             // Auth token
-    };
-    
-    auth?: {
-      scheme?: 'bearer' | 'apiKey';
-      apiKey?: string;
-    };
-  };
-  
-  client?: {
-    enabled?: boolean;
-    agents?: Record<string, {     // Named remote agents
-      url: string;
-      token?: string;
-    }>;
-  };
-  
-  tasks?: {
-    ttlDays?: number;             // Default: 7
-    timeoutMinutes?: number;      // Default: 30
-    maxQueuedPerContext?: number; // Default: 100
-  };
-  
-  agentCard?: Partial<AgentCard>; // Override auto-generated fields
-}
-```
-
-### Calling Remote A2A Agents
-
-Enable client mode to call other A2A agents:
-
-```jsonc
-{
-  "a2a": {
-    "client": {
+  "channels": {
+    "a2a": {
       "enabled": true,
-      "agents": {
-        "research-bot": {
-          "url": "https://research-bot.example.com/a2a"
+      "accounts": {
+        "default": {
+          "relayUrl": "wss://your-relay.example.com/agent",
+          "relaySecret": "your-32-char-jwt-secret",
+          "agentId": "my-agent"
         }
       }
     }
@@ -275,71 +38,99 @@ Enable client mode to call other A2A agents:
 }
 ```
 
-Your agent gets tools:
-- `a2a_list_agents` — List configured agents
-- `a2a_send_message` — Send message to agent
-- `a2a_get_task` — Check task status
-
-### Development
+### 3. Restart & Verify
 
 ```bash
-# Clone
-git clone https://github.com/zeroasterisk/openclaw-a2a
-cd openclaw-a2a
-
-# Install
-npm install
-
-# Build
-npm run build
-
-# Run tests
-npm test
-
-# Run test server (for TCK)
-node dist/test-server.js
-
-# Run TCK tests (requires a2a-tck repo)
-cd ../a2a-tck
-python run_tck.py --sut-url http://localhost:9999 --category all
+openclaw gateway restart
+openclaw a2a status
 ```
 
-### E2E Testing with Relay
+```
+📡 A2A Status
+🟢 Connected
+   Relay: wss://your-relay.example.com/agent
+   Agent: my-agent
+```
 
-Test the full relay flow (Client → Relay → Agent → Response):
+## How It Works
+
+```
+Other Agents ──► A2A Relay ◄── Your OpenClaw
+                    │
+              WebSocket connection
+              (works behind NAT)
+```
+
+A2A is treated as a **channel** — like Telegram or Discord. Messages come in via A2A, route to your agent, responses go back.
+
+## Config Options
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `relayUrl` | ✅ | - | WebSocket URL (`wss://...`) |
+| `relaySecret` | ✅ | - | JWT secret (32+ chars) |
+| `agentId` | - | `openclaw` | Your agent's ID |
+| `tenant` | - | `default` | Tenant namespace |
+| `agentName` | - | `OpenClaw Agent` | Display name |
+| `autoStart` | - | `true` | Connect on gateway start |
+
+## Optional: Enable OPT
+
+OPT (Objective-Plan-Task) adds hierarchical task management:
+
+```json
+{
+  "channels": {
+    "a2a": {
+      "enabled": true,
+      "opt": { "enabled": true },
+      "accounts": { ... }
+    }
+  }
+}
+```
+
+Creates methods: `a2a.opt.objectives.*`, `a2a.opt.plans.*`, `a2a.opt.tasks.*`
+
+See [A2A OPT Extension](https://github.com/zeroasterisk/a2a-opt) for the spec.
+
+## CLI Commands
 
 ```bash
-# Against deployed relay
-RELAY_SECRET=your-secret ./e2e-test.sh https://your-relay.example.com
-
-# Against local relay
-RELAY_SECRET=test-secret ./e2e-test.sh http://localhost:8765
+openclaw a2a status      # Check connection
+openclaw a2a connect     # Manual connect
+openclaw a2a disconnect  # Disconnect
+openclaw a2a reset       # Reset retry counter
 ```
 
-The E2E test:
-1. Starts a test agent
-2. Connects it to the relay
-3. Sends a message
-4. Verifies the response
+## Troubleshooting
 
----
+| Problem | Fix |
+|---------|-----|
+| Auth failed | Check `relaySecret` matches relay |
+| Won't connect | Check relay URL, see `/tmp/a2a-plugin.log` |
+| Messages not routing | Ensure `gateway.auth.token` is set |
 
-## OPT Extension (Objective-Plan-Task)
+## Related Repos
 
-For hierarchical task management (Objectives → Plans → Tasks), see the standalone extension:
+| Repo | Description |
+|------|-------------|
+| [a2a-relay](https://github.com/zeroasterisk/a2a-relay) | Relay server (Go) |
+| [a2a-opt](https://github.com/zeroasterisk/a2a-opt) | OPT extension spec |
+| [zaf/plugins/a2a](https://github.com/zeroasterisk/zaf/tree/main/plugins/a2a) | Plugin source |
 
-📦 **[a2a-opt](https://github.com/zeroasterisk/a2a-opt)** — works with any A2A implementation
+## Architecture
 
-This package will include an OPT adapter for OpenClaw sessions.
+The plugin registers as an OpenClaw channel:
+- **relay-client.ts** — WebSocket connection to relay
+- **handlers.ts** — A2A protocol handlers
+- **channel.ts** — OpenClaw channel adapter
+- **opt/** — Optional OPT extension
 
-## Design Documents
+## A2A Protocol
 
-For implementation details and architecture decisions:
-
-- [OpenClaw Integration Design](docs/OPENCLAW-INTEGRATION.md)
-- [A2A Task Service Design](docs/A2A-TASK-SERVICE-DESIGN.md)
-
----
+- [A2A Spec](https://a2a-protocol.org)
+- [A2A GitHub](https://github.com/google/A2A)
 
 ## License
 
