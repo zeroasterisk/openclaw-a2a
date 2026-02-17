@@ -13,8 +13,6 @@
 git clone https://github.com/zeroasterisk/openclaw-a2a ~/.openclaw/extensions/a2a
 ```
 
-Or copy from [zeroasterisk/zaf/plugins/a2a](https://github.com/zeroasterisk/zaf/tree/main/plugins/a2a).
-
 ### 2. Configure
 
 ```json
@@ -117,7 +115,7 @@ openclaw a2a reset       # Reset retry counter
 |------|-------------|
 | [a2a-relay](https://github.com/zeroasterisk/a2a-relay) | Relay server (Go) |
 | [a2a-opt](https://github.com/zeroasterisk/a2a-opt) | OPT extension spec |
-| [zaf/plugins/a2a](https://github.com/zeroasterisk/zaf/tree/main/plugins/a2a) | Plugin source |
+| [openclaw-a2a](https://github.com/zeroasterisk/openclaw-a2a) | This plugin (you are here) |
 
 ## Architecture
 
