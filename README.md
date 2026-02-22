@@ -1,4 +1,6 @@
 # OpenClaw A2A
+[![CI](https://github.com/zeroasterisk/openclaw-a2a/actions/workflows/ci.yml/badge.svg)](https://github.com/zeroasterisk/openclaw-a2a/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 
 > ⚠️ **Beta** — Tested and working. Shipping today!
 
