@@ -1,4 +1,7 @@
 # OpenClaw A2A
+
+> **⚠️ Personal Hobby Project** — This is an independent, personal project by [Alan Blount](https://github.com/zeroasterisk). It is **not affiliated with, endorsed by, or supported by any employer, company, or organization**. No warranty; use at your own risk.
+
 [![CI](https://github.com/zeroasterisk/openclaw-a2a/actions/workflows/ci.yml/badge.svg)](https://github.com/zeroasterisk/openclaw-a2a/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 
